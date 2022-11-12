@@ -15,6 +15,11 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.VisualBasic;
 using System.Xml.Linq;
+using System.Collections.ObjectModel;
+
+using TDDD49Template.Models;
+using System.Windows.Threading;
+using System.Windows.Controls;
 
 namespace WpfApp1.Models
 {
@@ -25,8 +30,28 @@ namespace WpfApp1.Models
         string displayname;
         NetworkStream stream;
 
-        bool hasAccepted = false;
+        public ObservableCollection<MessagePacket>? MessagePackets { get; protected set; } = new ObservableCollection<MessagePacket>();
+        /*public List<MessagePacket>? MessagePackets { get; protected set; } = new List<MessagePacket>();*/
+        public void AddMessage(MessagePacket messagePacket)
+        {
+            MessagePackets.Add(messagePacket);
+            // NOTIFY that it has changed?
 
+            System.Diagnostics.Debug.WriteLine("List in Model");
+            for (int i = 0; i < MessagePackets.Count; i++)
+            {
+                System.Diagnostics.Debug.WriteLine(MessagePackets[i].Message);
+            }
+            System.Diagnostics.Debug.WriteLine("End of: List in Model");
+
+        }
+
+        bool hasAccepted = false;
+        
+/*        public void Passcollection(ObservableCollection<MessagePacket> msgpacket)
+        {
+            messages = msgpacket;
+        }*/
         public void ConnectToListener(string ip, string port)
         {
             Thread connectionThread = new Thread(() => ConnectTcpClientToListener(ip, port));
@@ -67,14 +92,6 @@ namespace WpfApp1.Models
             displayname = name;
         }
 
-        private class MessagePacket
-        {
-            public string? RequestType { get; set; }
-            public string? Name { get; set; }
-            public DateTime Date { get; set; }
-            public string? Message { get; set; }
-        }
-
         private int ReceiveMessage(string jsonobj)
         {
             System.Diagnostics.Debug.WriteLine($"Message received: \"{jsonobj}\"");
@@ -99,6 +116,9 @@ namespace WpfApp1.Models
                     {
                         // User clicked yes
                         hasAccepted = true;
+
+                        // Init messages collection
+                        /*MessagePackets = new();*/
 
                         // Create response packet
                         MessagePacket? response = new()
@@ -144,18 +164,24 @@ namespace WpfApp1.Models
             else if (messagepacket.RequestType == "acceptconnection")
             {
                 MessageBox.Show(messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!");
+                /*MessagePackets = new();*/
                 return 1;
             }
             else if (messagepacket.RequestType == "rejectconnection")
             {
                 MessageBox.Show("Your Chat request was denied. Try connecting to someone else!");
                 // TODO: reset socket
-                return -1;
+                return -1; // maybe works? needs testing
             }
             else if (messagepacket.RequestType == "message")
             {
                 // If we have a message, we create the message bubble.
                 MessageBox.Show(messagepacket.Message); // TODO: add to display instead
+                                                        //MessagePackets.Add(messagepacket);
+                Application.Current.Dispatcher.Invoke(new Action(() =>
+                {
+                    MessagePackets.Add(messagepacket);
+                }));
             }
 
             // if we have a connectionclose event we close the communications.
