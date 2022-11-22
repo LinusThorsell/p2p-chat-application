@@ -15,7 +15,6 @@ namespace WpfApp1.ViewModels
     public class MainViewModel
     {
         private ConnectionHandler _connection;
-        //public ObservableCollection<MessagePacket> MessagePackets { get; protected set; }
 
         private String _messageToSend;
         private String _portToConnect;
@@ -27,6 +26,7 @@ namespace WpfApp1.ViewModels
         private ICommand _pushConnect;
         private ICommand _pushListen;
         private ICommand _pushDisplayname;
+        private ICommand _pushExitChat;
 
         public ConnectionHandler Connection
         {
@@ -83,33 +83,24 @@ namespace WpfApp1.ViewModels
             get { return _pushDisplayname; }
             set { _pushDisplayname = value; }
         }
+        public ICommand PushExitChat
+        {
+            get { return _pushExitChat; }
+            set { _pushExitChat = value; }
+        }
 
         public MainViewModel(ConnectionHandler connectionHandler)
         {
             this.Connection = connectionHandler;
-            
-            //if (Connection.MessagePackets == null) { System.Diagnostics.Debug.WriteLine("MessagePackets is null"); }
-            //this.MessagePackets = new ObservableCollection<MessagePacket>(Connection.MessagePackets);
 
             this.PushSendMessage = new SendMessageCommand(this);
             this.PushConnect = new ConnectCommand(this);
             this.PushListen = new ListenCommand(this);
             this.PushDisplayname = new DisplaynameCommand(this);
+            this.PushExitChat = new ExitChatCommand(this);
         }
-/*        public void AddMessage()
-        {
-            this.Connection.AddMessage(new MessagePacket());
-            //What should I do here?
-        }*/
         public void sendMessage()
         {
-/*            System.Diagnostics.Debug.WriteLine("List in View");
-            for (int i = 0; i < Connection.MessagePackets.Count; i++)
-            {
-                System.Diagnostics.Debug.WriteLine(Connection.MessagePackets[i].Message);
-            }
-            System.Diagnostics.Debug.WriteLine("End of: List in View");*/
-
             Connection.SendMessage(MessageToSend);
         }
         public void connect()
@@ -123,6 +114,10 @@ namespace WpfApp1.ViewModels
         public void setDisplayname()
         {
             Connection.SetDisplayname(_displayname);
+        }
+        public void exitChat()
+        {
+            Connection.ExitChat();
         }
     }
 }

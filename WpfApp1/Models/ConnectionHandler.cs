@@ -28,25 +28,43 @@ namespace WpfApp1.Models
         TcpClient client;
         TcpListener listener;
         string displayname;
+        string partner;
         NetworkStream stream;
+        bool hasAccepted = false;
+        ConversationStore conversationStore = new() {};
 
         public ObservableCollection<MessagePacket>? MessagePackets { get; protected set; } = new ObservableCollection<MessagePacket>();
+        public ObservableCollection<ConversationStore.Conversation> PastConversations;
         /*public List<MessagePacket>? MessagePackets { get; protected set; } = new List<MessagePacket>();*/
         public void AddMessage(MessagePacket messagePacket)
         {
             MessagePackets.Add(messagePacket);
-            // NOTIFY that it has changed?
-
-            System.Diagnostics.Debug.WriteLine("List in Model");
-            for (int i = 0; i < MessagePackets.Count; i++)
-            {
-                System.Diagnostics.Debug.WriteLine(MessagePackets[i].Message);
-            }
-            System.Diagnostics.Debug.WriteLine("End of: List in Model");
-
         }
+        
+        public void ExitChat()
+        {
+            System.Diagnostics.Debug.WriteLine("Attempting to exit chat");
+            // send connectionclose event.
+            SendJSON(new MessagePacket()
+            {
+                RequestType = "closeconnection",
+                Name = displayname,
+                Date = DateTime.Now,
+                Message = ""
+            });
 
-        bool hasAccepted = false;
+            // save conversation to log.
+            if (MessagePackets.Count > 0)
+            {
+                conversationStore.SaveConversation(MessagePackets, displayname, partner);
+                MessagePackets.Clear();
+            }
+
+            // enter conversation viewer mode.
+            System.Diagnostics.Debug.WriteLine("TODO: Entering viewer mode");
+            PastConversations = conversationStore.getConverstations();
+            
+        }
         
 /*        public void Passcollection(ObservableCollection<MessagePacket> msgpacket)
         {
@@ -75,6 +93,10 @@ namespace WpfApp1.Models
                 Message = msg
             };
 
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                MessagePackets.Add(messagepacket);
+            }));
 
             var serialized_messagepacket = (JsonSerializer.Serialize<MessagePacket>(messagepacket));
             var encoded_messagepacket = Encoding.UTF8.GetBytes(serialized_messagepacket);
@@ -100,10 +122,7 @@ namespace WpfApp1.Models
             MessagePacket? messagepacket = JsonSerializer.Deserialize<MessagePacket>(jsonobj);
 
             if (messagepacket == null) { return -1; }   // Guard for null values (shouldnt happen using the program)
-                                                        // but would stop some attack vectors.
-
-            // TODO: Check what type of message we have.
-            System.Diagnostics.Debug.WriteLine(messagepacket.RequestType);
+                                                        // but would stop some attack vectors
 
             // If we have a establishconnection request, ask the receiver if they want to connect, otherwise disconnect socket.
             if (messagepacket.RequestType == "establishconnection")
@@ -116,6 +135,7 @@ namespace WpfApp1.Models
                     {
                         // User clicked yes
                         hasAccepted = true;
+                        partner = messagepacket.Name;
 
                         // Init messages collection
                         /*MessagePackets = new();*/
@@ -176,7 +196,7 @@ namespace WpfApp1.Models
             else if (messagepacket.RequestType == "message")
             {
                 // If we have a message, we create the message bubble.
-                MessageBox.Show(messagepacket.Message); // TODO: add to display instead
+                //MessageBox.Show(messagepacket.Message); // TODO: add to display instead
                                                         //MessagePackets.Add(messagepacket);
                 Application.Current.Dispatcher.Invoke(new Action(() =>
                 {

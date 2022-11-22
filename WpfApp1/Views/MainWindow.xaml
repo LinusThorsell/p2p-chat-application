@@ -9,114 +9,115 @@
     <Grid Margin="0,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="1*"></ColumnDefinition>
-            <ColumnDefinition Width="4*"></ColumnDefinition>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="1*"></RowDefinition>
-            <RowDefinition Height="20*"></RowDefinition>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" DockPanel.Dock = "Top" Padding="0" BorderBrush="Black" BorderThickness="1">
-            <StackPanel>
-                <TextBlock>
-                    Peer 2 Peer Chat Application
-                </TextBlock>
-            </StackPanel>
-        </Border>
-        <Border Grid.Row="0" Grid.Column="1" DockPanel.Dock = "Top" Padding="0" BorderBrush="Black" BorderThickness="1">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1*"></ColumnDefinition>
-                    <ColumnDefinition Width="2*"></ColumnDefinition>
-                    <ColumnDefinition Width="1*"></ColumnDefinition>
-                    <ColumnDefinition Width="1*"></ColumnDefinition>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="1*"></RowDefinition>
-                </Grid.RowDefinitions>
-                <TextBlock>Status: Disconnected</TextBlock>
-                <TextBlock Grid.Column="1">Chatting with:</TextBlock>
-                <Button Grid.Column="2">Exit Chat</Button>
-                <Button Grid.Column="3">Buzz Receiver</Button>
-            </Grid>
-        </Border>
-
-        <Border Grid.Row="1" Padding="5" BorderBrush="Black" BorderThickness="1">
-            <StackPanel DockPanel.Dock="Left" >
-                <Border Padding="5" BorderBrush="Black" BorderThickness="0,0,0,1">
-                    <StackPanel>
-                        <TextBlock Margin="0,0,0,5">Ínput your displayname</TextBlock>
-                        <TextBox Text="{Binding Path=Displayname}" Margin="0,0,0,5"></TextBox>
-                        <Button Command="{Binding PushDisplayname}" Margin="0,0,0,5">Change Displayname</Button>
-                    </StackPanel>
-                </Border>
-
-                <Border Padding="5" BorderBrush="Black" BorderThickness="0,0,0,1">
-                    <StackPanel Margin="0,5,0,0">
-                        <TextBlock Margin="0,0,0,5">Ínput Partner IP Address</TextBlock>
-                        <TextBox Text="{Binding Path=IpToConnect}" Margin="0,0,0,5"></TextBox>
-                        <TextBlock Margin="0,0,0,5">Ínput Partner Port</TextBlock>
-                        <TextBox Text="{Binding Path=PortToConnect}" Margin="0,0,0,5"></TextBox>
-                        <Button Command="{Binding PushConnect}" Margin="0,0,0,5">Connect</Button>
-                    </StackPanel>
-                </Border>
-
-                <Border Padding="5" BorderBrush="Black" BorderThickness="0,0,0,1">
-                    <StackPanel Margin="0,5,0,0">
-                        <TextBlock Margin="0,0,0,5">Ínput port to listen on</TextBlock>
-                        <TextBox Text="{Binding Path=PortToListen}" Margin="0,0,0,5"></TextBox>
-                        <Button Command="{Binding PushListen}" Margin="0,0,0,5">Listen</Button>
-                    </StackPanel>
-                </Border>
-
-                <StackPanel>
-                    <TextBlock Margin="0,10,0,0">
-                            Peer to peer communication
-                            <LineBreak />
-                            app built by Linus Thorsell
-                            <LineBreak />
-                            for the TDDD49 Course at
-                            <LineBreak />
-                            Linköpings Universitet
-                    </TextBlock>
-                </StackPanel>
-
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="2" Grid.Column="2" Padding="5" BorderBrush="Black" BorderThickness="1">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="10*" />
-                    <RowDefinition Height="1*" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <ListBox x:Name="Listbox"  ItemsSource="{Binding Path=Connection.MessagePackets}" ScrollViewer.VerticalScrollBarVisibility="Auto" BorderThickness="2" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Date}"/>
-                                <TextBlock Text="{Binding Name}"/>
-                                <TextBlock Text="{Binding Message}"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-
-                <Grid Grid.Row="1">
+        <TabControl>
+            <TabItem Header="Connection">
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="1*"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="1*"></RowDefinition>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="1" Padding="5" BorderBrush="Black" BorderThickness="1">
+                        <StackPanel DockPanel.Dock="Left" >
+                            <Border Padding="5" BorderBrush="Black" BorderThickness="0,0,0,1">
+                                <StackPanel>
+                                    <TextBlock Margin="0,0,0,5">Input your displayname</TextBlock>
+                                    <TextBox Text="{Binding Path=Displayname}" Margin="0,0,0,5"></TextBox>
+                                    <Button Command="{Binding PushDisplayname}" Margin="0,0,0,5">Change Displayname</Button>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Padding="5" BorderBrush="Black" BorderThickness="0,0,0,1">
+                                <StackPanel Margin="0,5,0,0">
+                                    <TextBlock Margin="0,0,0,5">Input Partner IP Address</TextBlock>
+                                    <TextBox Text="{Binding Path=IpToConnect}" Margin="0,0,0,5"></TextBox>
+                                    <TextBlock Margin="0,0,0,5">Input Partner Port</TextBlock>
+                                    <TextBox Text="{Binding Path=PortToConnect}" Margin="0,0,0,5"></TextBox>
+                                    <Button Command="{Binding PushConnect}" Margin="0,0,0,5">Connect</Button>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Padding="5" BorderBrush="Black" BorderThickness="0,0,0,1">
+                                <StackPanel Margin="0,5,0,0">
+                                    <TextBlock Margin="0,0,0,5">Input port to listen on</TextBlock>
+                                    <TextBox Text="{Binding Path=PortToListen}" Margin="0,0,0,5"></TextBox>
+                                    <Button Command="{Binding PushListen}" Margin="0,0,0,5">Listen</Button>
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel>
+                                <TextBlock Margin="0,10,0,0">
+                                    Peer to peer communication app built by Linus Thorsell
+                                <LineBreak />
+                                    for the TDDD49 Course at Linköpings Universitet
+                                </TextBlock>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Current Chat">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="1*"></RowDefinition>
+                        <RowDefinition Height="10*" />
+                        <RowDefinition Height="1*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    
-                    <TextBox Grid.Row="2" Text="{Binding Path=MessageToSend}" Margin="0,0,0,0"></TextBox>
-                    <Button Grid.Row="2" Grid.Column="3" Command="{Binding PushSendMessage}" Margin="0,0,0,0">Send Message!</Button>
-                </Grid>
 
-            </Grid>
-        </Border>
+                    <TextBlock>Currently chatting with:</TextBlock>
+
+                    <ListBox x:Name="Listbox" Grid.Row="1" ItemsSource="{Binding Path=Connection.MessagePackets}" ScrollViewer.VerticalScrollBarVisibility="Auto" BorderThickness="2" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Date}"/>
+                                    <TextBlock Text="{Binding Name}"/>
+                                    <TextBlock Text="{Binding Message}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Text="{Binding Path=MessageToSend}" Margin="0,0,0,0"></TextBox>
+                        <Button Grid.Column="3" Command="{Binding PushSendMessage}" Margin="0,0,0,0">Send Message!</Button>
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Past Chats">
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="113*" />
+                        <ColumnDefinition Width="416*"/>
+                        <ColumnDefinition Width="265*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="10*"></RowDefinition>
+                        <RowDefinition Height="1*"></RowDefinition>
+                    </Grid.RowDefinitions>
+
+                    <!--="{Binding Path=MessageToSend}"-->
+                    <!--Command="{Binding PushSendMessage}"-->
+                    <TextBox Margin="0,369,0,0" Grid.ColumnSpan="2" Grid.RowSpan="2"/>
+                    <Button Grid.Column="1" Margin="416,369,0,0" Grid.ColumnSpan="2" Grid.RowSpan="2">Search</Button>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>

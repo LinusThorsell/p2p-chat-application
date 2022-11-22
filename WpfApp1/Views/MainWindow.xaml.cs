@@ -29,9 +29,11 @@ namespace WpfApp1
 
         }
 
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
+            //do my stuff before closing
 
+            base.OnClosing(e);
         }
     }
 }
