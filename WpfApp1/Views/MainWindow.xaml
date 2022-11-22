@@ -101,21 +101,38 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Past Chats">
-                <Grid Grid.Row="2">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="113*" />
-                        <ColumnDefinition Width="416*"/>
-                        <ColumnDefinition Width="265*" />
-                    </Grid.ColumnDefinitions>
+                <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="10*"></RowDefinition>
                         <RowDefinition Height="1*"></RowDefinition>
+                        <RowDefinition Height="10*" />
+                        <RowDefinition Height="1*" />
                     </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                    <!--="{Binding Path=MessageToSend}"-->
-                    <!--Command="{Binding PushSendMessage}"-->
-                    <TextBox Margin="0,369,0,0" Grid.ColumnSpan="2" Grid.RowSpan="2"/>
-                    <Button Grid.Column="1" Margin="416,369,0,0" Grid.ColumnSpan="2" Grid.RowSpan="2">Search</Button>
+                    <TextBlock>Past chats:</TextBlock>
+
+                    <ListBox x:Name="Listbox2" Grid.Row="1" ItemsSource="{Binding Path=Connection.PastConversations}" ScrollViewer.VerticalScrollBarVisibility="Auto" BorderThickness="2" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Id}"/>
+                                    <TextBlock Text="{Binding PartnerName}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Text="{Binding Path=MessageToSend}" Margin="0,0,0,0"></TextBox>
+                        <Button Grid.Column="3" Command="{Binding PushSendMessage}" Margin="0,0,0,0">Send Message!</Button>
+                    </Grid>
                 </Grid>
             </TabItem>
         </TabControl>

@@ -20,6 +20,7 @@ using System.Collections.ObjectModel;
 using TDDD49Template.Models;
 using System.Windows.Threading;
 using System.Windows.Controls;
+using System.Reflection.Metadata.Ecma335;
 
 namespace WpfApp1.Models
 {
@@ -32,10 +33,12 @@ namespace WpfApp1.Models
         NetworkStream stream;
         bool hasAccepted = false;
         ConversationStore conversationStore = new() {};
+        private string CurrentConversationID = "";
 
         public ObservableCollection<MessagePacket>? MessagePackets { get; protected set; } = new ObservableCollection<MessagePacket>();
-        public ObservableCollection<ConversationStore.Conversation> PastConversations;
+        public ObservableCollection<ConversationStore.Conversation>? PastConversations { get; protected set; } = new ObservableCollection<ConversationStore.Conversation>();
         /*public List<MessagePacket>? MessagePackets { get; protected set; } = new List<MessagePacket>();*/
+
         public void AddMessage(MessagePacket messagePacket)
         {
             MessagePackets.Add(messagePacket);
@@ -62,14 +65,10 @@ namespace WpfApp1.Models
 
             // enter conversation viewer mode.
             System.Diagnostics.Debug.WriteLine("TODO: Entering viewer mode");
-            PastConversations = conversationStore.getConverstations();
-            
+            UpdatePastChats();
+
         }
         
-/*        public void Passcollection(ObservableCollection<MessagePacket> msgpacket)
-        {
-            messages = msgpacket;
-        }*/
         public void ConnectToListener(string ip, string port)
         {
             Thread connectionThread = new Thread(() => ConnectTcpClientToListener(ip, port));
@@ -98,6 +97,9 @@ namespace WpfApp1.Models
                 MessagePackets.Add(messagepacket);
             }));
 
+            conversationStore.UpdateConversation(CurrentConversationID, MessagePackets, displayname, partner);
+            UpdatePastChats();
+
             var serialized_messagepacket = (JsonSerializer.Serialize<MessagePacket>(messagepacket));
             var encoded_messagepacket = Encoding.UTF8.GetBytes(serialized_messagepacket);
             stream.WriteAsync(encoded_messagepacket);
@@ -112,6 +114,21 @@ namespace WpfApp1.Models
         public void SetDisplayname(string name)
         {
             displayname = name;
+            UpdatePastChats();
+        }
+
+        private void UpdatePastChats()
+        {
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                List<ConversationStore.Conversation> temp_convo = conversationStore.getConversations(displayname);
+
+                PastConversations.Clear();
+                foreach (ConversationStore.Conversation conversation in temp_convo)
+                {
+                    PastConversations.Add(conversation);
+                }
+            }));
         }
 
         private int ReceiveMessage(string jsonobj)
@@ -137,6 +154,8 @@ namespace WpfApp1.Models
                         hasAccepted = true;
                         partner = messagepacket.Name;
 
+                        CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
+
                         // Init messages collection
                         /*MessagePackets = new();*/
 
@@ -153,7 +172,6 @@ namespace WpfApp1.Models
                         SendJSON(response);
                         return 1;
 
-                        // TODO: Enter 'chatting mode'
                     }
                     else
                     {
@@ -183,8 +201,9 @@ namespace WpfApp1.Models
             }
             else if (messagepacket.RequestType == "acceptconnection")
             {
+                partner = messagepacket.Name;
+                CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
                 MessageBox.Show(messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!");
-                /*MessagePackets = new();*/
                 return 1;
             }
             else if (messagepacket.RequestType == "rejectconnection")
@@ -196,18 +215,47 @@ namespace WpfApp1.Models
             else if (messagepacket.RequestType == "message")
             {
                 // If we have a message, we create the message bubble.
-                //MessageBox.Show(messagepacket.Message); // TODO: add to display instead
-                                                        //MessagePackets.Add(messagepacket);
                 Application.Current.Dispatcher.Invoke(new Action(() =>
                 {
                     MessagePackets.Add(messagepacket);
                 }));
+                conversationStore.UpdateConversation(CurrentConversationID, MessagePackets, displayname, partner);
+                UpdatePastChats();
+            }
+            else if (messagepacket.RequestType == "closeconnection")
+            {
+                // If we have a closeconnection request, we close the connection.
+                handleConnectionClosed();
+                CurrentConversationID = "";
             }
 
-            // if we have a connectionclose event we close the communications.
-            // TODO: Implement
-
             return 1;
+        }
+
+        private void handleConnectionClosed()
+        {
+            if (CurrentConversationID.Length > 1)
+            {
+                // We were in a conversation when the Listener failed.
+                MessageBox.Show(partner + " disconnected from the chat.");
+            }
+            else
+            {
+                // We were in the process of connecting to a partner when the Listener failed.
+                MessageBox.Show("Connection to partner failed. Try connecting to someone else!");
+
+            }
+
+            // Reset variables
+            partner = "";
+            
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                MessagePackets.Clear();
+            }));
+            
+            hasAccepted = false;
+            CurrentConversationID = "";
         }
 
         // =================== Threaded tasks/functions =======================
@@ -260,7 +308,7 @@ namespace WpfApp1.Models
             catch
             {
                 System.Diagnostics.Debug.WriteLine("Could not connect to TcpListener");
-                MessageBox.Show("Could not connect, or lost connection while connected.");
+                handleConnectionClosed();
             }
 
         }
@@ -304,6 +352,9 @@ namespace WpfApp1.Models
             catch
             {
                 System.Diagnostics.Debug.WriteLine("Could not start listening/connect to TCPClient");
+
+                handleConnectionClosed();
+                
                 listener.Stop();
             }
             finally
