@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GalaSoft.MvvmLight.Command;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -21,12 +22,14 @@ namespace WpfApp1.ViewModels
         private String _ipToConnect;
         private String _portToListen;
         private String _displayname;
+        private String _queryToSearch;
 
         private ICommand _pushSendMessage;
         private ICommand _pushConnect;
         private ICommand _pushListen;
         private ICommand _pushDisplayname;
         private ICommand _pushExitChat;
+        private ICommand _pushSearchAndUpdatePastConversations;
 
         public ConnectionHandler Connection
         {
@@ -62,6 +65,11 @@ namespace WpfApp1.ViewModels
             get { return _displayname; }
             set { _displayname = value; }
         }
+        public String QueryToSearch
+        {
+            get { return _queryToSearch; }
+            set { _queryToSearch = value; }
+        }
 
         public ICommand PushSendMessage
         {
@@ -88,6 +96,19 @@ namespace WpfApp1.ViewModels
             get { return _pushExitChat; }
             set { _pushExitChat = value; }
         }
+        public ICommand PushSearchAndUpdatePastConversations
+        {
+            get { return _pushSearchAndUpdatePastConversations; }
+            set { _pushSearchAndUpdatePastConversations = value; }
+
+        }
+
+        public ICommand PushShowPastChat => new RelayCommand<ConversationStore.Conversation>(obj => showPastChat(obj));
+
+        public void showPastChat(ConversationStore.Conversation conversation)
+        {
+            Connection.showPastChat(conversation);
+        }
 
         public MainViewModel(ConnectionHandler connectionHandler)
         {
@@ -98,6 +119,12 @@ namespace WpfApp1.ViewModels
             this.PushListen = new ListenCommand(this);
             this.PushDisplayname = new DisplaynameCommand(this);
             this.PushExitChat = new ExitChatCommand(this);
+            this.PushSearchAndUpdatePastConversations = new SearchAndUpdatePastConversationsCommand(this);
+        }
+
+        public void searchAndUpdatePastConversations()
+        {
+            Connection.SearchAndUpdatePastConversations(_queryToSearch);
         }
         public void sendMessage()
         {

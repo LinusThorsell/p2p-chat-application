@@ -21,6 +21,8 @@ using TDDD49Template.Models;
 using System.Windows.Threading;
 using System.Windows.Controls;
 using System.Reflection.Metadata.Ecma335;
+using System.Windows.Input;
+using static TDDD49Template.Models.ConversationStore;
 
 namespace WpfApp1.Models
 {
@@ -39,6 +41,38 @@ namespace WpfApp1.Models
         public ObservableCollection<ConversationStore.Conversation>? PastConversations { get; protected set; } = new ObservableCollection<ConversationStore.Conversation>();
         /*public List<MessagePacket>? MessagePackets { get; protected set; } = new List<MessagePacket>();*/
 
+        public void showPastChat(ConversationStore.Conversation conversation)
+        {
+            // TODO force user to select chatwindow tabitem.
+            
+            
+            
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                ObservableCollection<MessagePacket> temp_convo = conversationStore.getConversationsById(conversation.Id, displayname);
+
+                MessagePackets.Clear();
+                foreach (MessagePacket conversation in temp_convo)
+                {
+                    MessagePackets.Add(conversation);
+                }
+            }));
+        }
+
+        public void SearchAndUpdatePastConversations(string query)
+        {
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                List<ConversationStore.Conversation> temp_convo = conversationStore.SearchAndUpdatePastConversations(query);
+
+                PastConversations.Clear();
+                foreach (ConversationStore.Conversation conversation in temp_convo)
+                {
+                    PastConversations.Add(conversation);
+                }
+            }));
+        }
+
         public void AddMessage(MessagePacket messagePacket)
         {
             MessagePackets.Add(messagePacket);
@@ -46,7 +80,6 @@ namespace WpfApp1.Models
         
         public void ExitChat()
         {
-            System.Diagnostics.Debug.WriteLine("Attempting to exit chat");
             // send connectionclose event.
             SendJSON(new MessagePacket()
             {
@@ -56,19 +89,19 @@ namespace WpfApp1.Models
                 Message = ""
             });
 
-            // save conversation to log.
-            if (MessagePackets.Count > 0)
-            {
-                conversationStore.SaveConversation(MessagePackets, displayname, partner);
-                MessagePackets.Clear();
-            }
+            // Clear Messages
+            MessagePackets.Clear();
 
             // enter conversation viewer mode.
-            System.Diagnostics.Debug.WriteLine("TODO: Entering viewer mode");
             UpdatePastChats();
 
+            // close connection.
+            hasAccepted = false;
+
+            // close stream.
+            
         }
-        
+
         public void ConnectToListener(string ip, string port)
         {
             Thread connectionThread = new Thread(() => ConnectTcpClientToListener(ip, port));
@@ -151,13 +184,17 @@ namespace WpfApp1.Models
                         MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
                         // User clicked yes
+
+                        // Clear any past messages
+                        Application.Current.Dispatcher.Invoke(new Action(() =>
+                        {
+                            MessagePackets.Clear();
+                        }));
+
                         hasAccepted = true;
                         partner = messagepacket.Name;
 
                         CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
-
-                        // Init messages collection
-                        /*MessagePackets = new();*/
 
                         // Create response packet
                         MessagePacket? response = new()
@@ -201,6 +238,12 @@ namespace WpfApp1.Models
             }
             else if (messagepacket.RequestType == "acceptconnection")
             {
+                // Remove all current chat messages in the window.
+                Application.Current.Dispatcher.Invoke(new Action(() =>
+                {
+                    MessagePackets.Clear();
+                }));
+
                 partner = messagepacket.Name;
                 CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
                 MessageBox.Show(messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!");
@@ -209,7 +252,6 @@ namespace WpfApp1.Models
             else if (messagepacket.RequestType == "rejectconnection")
             {
                 MessageBox.Show("Your Chat request was denied. Try connecting to someone else!");
-                // TODO: reset socket
                 return -1; // maybe works? needs testing
             }
             else if (messagepacket.RequestType == "message")
@@ -225,8 +267,7 @@ namespace WpfApp1.Models
             else if (messagepacket.RequestType == "closeconnection")
             {
                 // If we have a closeconnection request, we close the connection.
-                handleConnectionClosed();
-                CurrentConversationID = "";
+                return -2; // maybe works? needs testing
             }
 
             return 1;
@@ -300,15 +341,23 @@ namespace WpfApp1.Models
                         if (ReceiveMessage(received_messagepacket) == -1) // if we have been denied close the socket
                         {
                             System.Diagnostics.Debug.WriteLine("Chat denied, closing socket");
+                            MessageBox.Show("Receiver denied the chat request.");
                             keepConnection = false;
                         };
+                        if (ReceiveMessage(received_messagepacket) == -2)
+                        {
+                            keepConnection = false;
+                            MessageBox.Show(partner + " disconnected from the chat.");
+                            //handleConnectionClosed();
+                            CurrentConversationID = "";
+                        }
                     }
                 }
             }
             catch
             {
                 System.Diagnostics.Debug.WriteLine("Could not connect to TcpListener");
-                handleConnectionClosed();
+                //handleConnectionClosed();
             }
 
         }
@@ -324,9 +373,15 @@ namespace WpfApp1.Models
                              // TODO: Make it exitable.
                 {
                     listener.Start();
+                    System.Diagnostics.Debug.WriteLine("after listener.start()");
 
+                    System.Diagnostics.Debug.WriteLine("before accept");
                     using TcpClient handler = await listener.AcceptTcpClientAsync();
+                    System.Diagnostics.Debug.WriteLine("after accept");
+                    System.Diagnostics.Debug.WriteLine("before getstream");
                     stream = handler.GetStream();
+                    System.Diagnostics.Debug.WriteLine("after getstream");
+
 
 
                     var keepConnection = true;
@@ -353,9 +408,8 @@ namespace WpfApp1.Models
             {
                 System.Diagnostics.Debug.WriteLine("Could not start listening/connect to TCPClient");
 
-                handleConnectionClosed();
-                
                 listener.Stop();
+                handleConnectionClosed();
             }
             finally
             {

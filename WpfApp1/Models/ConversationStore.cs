@@ -1,4 +1,6 @@
-﻿using System;
+﻿using GalaSoft.MvvmLight.CommandWpf;
+using Microsoft.VisualBasic;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -7,6 +9,9 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using System.Xml.Linq;
 using WpfApp1.ViewModels.Commands;
 using static TDDD49Template.Models.ConversationStore;
 
@@ -108,6 +113,34 @@ namespace TDDD49Template.Models
             }
 
             return new List<Conversation>();
+        }
+
+        public ObservableCollection<MessagePacket> getConversationsById(string Id, string MyName)
+        {
+            string json = File.ReadAllText("ConversationsAs_" + MyName + ".json");
+            Conversations = JsonSerializer.Deserialize<List<Conversation>>(json);
+
+            Conversation CorrectConversation = Conversations[0]; // This is so wrong and I love it.
+            // Find conversation in Conversations with specific ID
+            Conversations.ForEach(delegate (Conversation convo)
+            {
+                if (convo.Id == Id)
+                {
+                    CorrectConversation = convo;
+                }
+            });
+
+            return CorrectConversation.Messages;
+        }
+
+        public List<Conversation> SearchAndUpdatePastConversations(string query)
+        {
+            List<Conversation> temp_convos = new ();
+
+            var resultAfterSearch = Conversations.Where(x => x.PartnerName.Contains(query));
+            temp_convos = resultAfterSearch.ToList();
+
+            return temp_convos;
         }
     }
 }
