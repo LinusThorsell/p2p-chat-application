@@ -10,5 +10,5 @@ Start listening for your friends connections!
 Start chatting!
 ![image](https://user-images.githubusercontent.com/45761642/204010281-5008c497-4319-4dcc-a856-a137d69c120d.png)
 
-Searchable conversation viewer! View your past conversations at any time!
+Searchable conversation viewer! View your past conversations any time!
 ![image](https://user-images.githubusercontent.com/45761642/204010423-4065372c-44d7-4ea4-aed5-f56dfce0e44f.png)
