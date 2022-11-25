@@ -30,6 +30,7 @@ namespace WpfApp1.ViewModels
         private ICommand _pushDisplayname;
         private ICommand _pushExitChat;
         private ICommand _pushSearchAndUpdatePastConversations;
+        private ICommand _pushBuzzz;
 
         public ConnectionHandler Connection
         {
@@ -100,10 +101,15 @@ namespace WpfApp1.ViewModels
         {
             get { return _pushSearchAndUpdatePastConversations; }
             set { _pushSearchAndUpdatePastConversations = value; }
-
         }
 
         public ICommand PushShowPastChat => new RelayCommand<ConversationStore.Conversation>(obj => showPastChat(obj));
+
+        public ICommand PushBuzzz
+        {
+            get { return _pushBuzzz; }
+            set { _pushBuzzz = value; }
+        }
 
         public void showPastChat(ConversationStore.Conversation conversation)
         {
@@ -120,6 +126,7 @@ namespace WpfApp1.ViewModels
             this.PushDisplayname = new DisplaynameCommand(this);
             this.PushExitChat = new ExitChatCommand(this);
             this.PushSearchAndUpdatePastConversations = new SearchAndUpdatePastConversationsCommand(this);
+            this.PushBuzzz = new BuzzzCommand(this);
         }
 
         public void searchAndUpdatePastConversations()
@@ -145,6 +152,10 @@ namespace WpfApp1.ViewModels
         public void exitChat()
         {
             Connection.ExitChat();
+        }
+        public void buzzz()
+        {
+            Connection.sendBuzzz();
         }
     }
 }

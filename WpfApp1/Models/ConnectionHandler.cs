@@ -37,21 +37,22 @@ namespace WpfApp1.Models
         ConversationStore conversationStore = new() {};
         private string CurrentConversationID = "";
 
+        bool stopListening = false;
+        bool keepConnection = true;
+
         public ObservableCollection<MessagePacket>? MessagePackets { get; protected set; } = new ObservableCollection<MessagePacket>();
         public ObservableCollection<ConversationStore.Conversation>? PastConversations { get; protected set; } = new ObservableCollection<ConversationStore.Conversation>();
-        /*public List<MessagePacket>? MessagePackets { get; protected set; } = new List<MessagePacket>();*/
 
         public void showPastChat(ConversationStore.Conversation conversation)
         {
-            // TODO force user to select chatwindow tabitem.
-            
-            
-            
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
                 ObservableCollection<MessagePacket> temp_convo = conversationStore.getConversationsById(conversation.Id, displayname);
 
+                // Clear currently displayed messages.
                 MessagePackets.Clear();
+
+                // Add messages from the selected conversation.
                 foreach (MessagePacket conversation in temp_convo)
                 {
                     MessagePackets.Add(conversation);
@@ -78,6 +79,33 @@ namespace WpfApp1.Models
             MessagePackets.Add(messagePacket);
         }
         
+        private void receiveBuzzz()
+        {
+            //the wav filename
+            string file = "pling.wav";
+
+            //get the current assembly
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+
+            //load the embedded resource as a stream
+            var stream = assembly.GetManifestResourceStream(string.Format("{0}.Res.{1}", assembly.GetName().Name, file));
+
+            //load the stream into the player
+            var player = new System.Media.SoundPlayer(stream);
+
+            //play the sound
+            player.Play();
+        }
+        public void sendBuzzz()
+        {
+            SendJSON(new MessagePacket()
+            {
+                RequestType = "buzzz",
+                Name = displayname,
+                Date = DateTime.Now,
+                Message = ""
+            });
+        }
         public void ExitChat()
         {
             // send connectionclose event.
@@ -92,13 +120,21 @@ namespace WpfApp1.Models
             // Clear Messages
             MessagePackets.Clear();
 
-            // enter conversation viewer mode.
-            UpdatePastChats();
-
             // close connection.
             hasAccepted = false;
 
+            // close listening outer loop.
+            stopListening = true;
+            // close listening inner loop
+            keepConnection = false;
+            // close actual listener
+            if (listener != null)
+            {
+                listener.Stop();
+            }
+
             // close stream.
+            handleConnectionClosed();
             
         }
 
@@ -142,7 +178,10 @@ namespace WpfApp1.Models
         {
             var serialized_messagepacket = (JsonSerializer.Serialize<MessagePacket>(messagepacket));
             var encoded_messagepacket = Encoding.UTF8.GetBytes(serialized_messagepacket);
-            stream.WriteAsync(encoded_messagepacket);
+            if (stream != null)
+            {
+                stream.WriteAsync(encoded_messagepacket);
+            }
         }
         public void SetDisplayname(string name)
         {
@@ -168,11 +207,9 @@ namespace WpfApp1.Models
         {
             System.Diagnostics.Debug.WriteLine($"Message received: \"{jsonobj}\"");
 
-            // TODO: Decode the JSON string into object.
             MessagePacket? messagepacket = JsonSerializer.Deserialize<MessagePacket>(jsonobj);
 
-            if (messagepacket == null) { return -1; }   // Guard for null values (shouldnt happen using the program)
-                                                        // but would stop some attack vectors
+            if (messagepacket == null) { return -1; }   // Guard for null values.
 
             // If we have a establishconnection request, ask the receiver if they want to connect, otherwise disconnect socket.
             if (messagepacket.RequestType == "establishconnection")
@@ -252,7 +289,7 @@ namespace WpfApp1.Models
             else if (messagepacket.RequestType == "rejectconnection")
             {
                 MessageBox.Show("Your Chat request was denied. Try connecting to someone else!");
-                return -1; // maybe works? needs testing
+                return -1;
             }
             else if (messagepacket.RequestType == "message")
             {
@@ -267,7 +304,11 @@ namespace WpfApp1.Models
             else if (messagepacket.RequestType == "closeconnection")
             {
                 // If we have a closeconnection request, we close the connection.
-                return -2; // maybe works? needs testing
+                return -2;
+            }
+            else if (messagepacket.RequestType == "buzzz")
+            {
+                receiveBuzzz();
             }
 
             return 1;
@@ -275,18 +316,6 @@ namespace WpfApp1.Models
 
         private void handleConnectionClosed()
         {
-            if (CurrentConversationID.Length > 1)
-            {
-                // We were in a conversation when the Listener failed.
-                MessageBox.Show(partner + " disconnected from the chat.");
-            }
-            else
-            {
-                // We were in the process of connecting to a partner when the Listener failed.
-                MessageBox.Show("Connection to partner failed. Try connecting to someone else!");
-
-            }
-
             // Reset variables
             partner = "";
             
@@ -338,17 +367,19 @@ namespace WpfApp1.Models
                      
                     if (received > 0) // If the string is larger than 0 = received something usable.
                     {
-                        if (ReceiveMessage(received_messagepacket) == -1) // if we have been denied close the socket
+
+                        int status = ReceiveMessage(received_messagepacket);
+
+                        if (status == -1) // if we have been denied close the socket
                         {
                             System.Diagnostics.Debug.WriteLine("Chat denied, closing socket");
-                            MessageBox.Show("Receiver denied the chat request.");
                             keepConnection = false;
                         };
-                        if (ReceiveMessage(received_messagepacket) == -2)
+                        if (status == -2)
                         {
                             keepConnection = false;
                             MessageBox.Show(partner + " disconnected from the chat.");
-                            //handleConnectionClosed();
+                            handleConnectionClosed();
                             CurrentConversationID = "";
                         }
                     }
@@ -356,8 +387,9 @@ namespace WpfApp1.Models
             }
             catch
             {
+                MessageBox.Show(partner + " disconnected from the chat.");
                 System.Diagnostics.Debug.WriteLine("Could not connect to TcpListener");
-                //handleConnectionClosed();
+                handleConnectionClosed();
             }
 
         }
@@ -366,11 +398,11 @@ namespace WpfApp1.Models
 
             var ipEndPoint = new IPEndPoint(IPAddress.Any, int.Parse(port));
             listener = new(ipEndPoint);
+            stopListening = false;
 
             try
             {
-                while (true) // After you have selected listen, keep listening forever 
-                             // TODO: Make it exitable.
+                while (!stopListening) // After you have selected listen, keep listening forever 
                 {
                     listener.Start();
                     System.Diagnostics.Debug.WriteLine("after listener.start()");
@@ -384,7 +416,7 @@ namespace WpfApp1.Models
 
 
 
-                    var keepConnection = true;
+                    keepConnection = true;
                     while (keepConnection)
                     {
                         var buffer = new byte[1_024];
@@ -393,12 +425,23 @@ namespace WpfApp1.Models
 
                         if (received > 0)
                         {
-                            if (ReceiveMessage(message) == -1)
+                            int status = ReceiveMessage(message);
+                            
+                            if (status == -1)
                             {
                                 // User denied connection request => stop listening for their messages.
                                 listener.Stop();
                                 // Break loop to relisten for next connection request.
                                 keepConnection = false;
+                            };
+                            if (status == -2)
+                            {
+                                listener.Stop();
+                                // Break loop to relisten for next connection request.
+                                keepConnection = false;
+                                MessageBox.Show(partner + " disconnected from the chat.");
+                                handleConnectionClosed();
+                                CurrentConversationID = "";
                             };
                         }
                     }
@@ -407,6 +450,14 @@ namespace WpfApp1.Models
             catch
             {
                 System.Diagnostics.Debug.WriteLine("Could not start listening/connect to TCPClient");
+                if (partner != "")
+                {
+                    MessageBox.Show(partner + " disconnected from the chat.");
+                }
+                else
+                {
+                    MessageBox.Show("Unknown conection error, closing connection.");
+                }
 
                 listener.Stop();
                 handleConnectionClosed();

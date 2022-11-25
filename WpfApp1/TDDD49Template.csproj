@@ -8,7 +8,27 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Views\Image\**" />
+    <EmbeddedResource Remove="Views\Image\**" />
+    <None Remove="Views\Image\**" />
+    <Page Remove="Views\Image\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Views\Res\github.png" />
+    <None Remove="Views\Res\pling.wav.wav" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Views\Res\pling.wav.wav" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MvvmLightLibs" Version="5.4.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Views\Res\github.png" />
   </ItemGroup>
 
 </Project>

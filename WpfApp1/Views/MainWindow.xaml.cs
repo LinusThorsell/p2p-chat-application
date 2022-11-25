@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,16 +30,17 @@ namespace WpfApp1
 
         }
 
-        private void PlaceholdersListBox_OnPreviewMouseDown(object sender, MouseButtonEventArgs e)
+        private void HandleLinkClick(object sender, RequestNavigateEventArgs e)
         {
-            var item = ItemsControl.ContainerFromElement(sender as ListBox, e.OriginalSource as DependencyObject) as ListBoxItem;
-            if (item != null)
+            var ps = new ProcessStartInfo(e.Uri.ToString())
             {
-                // ListBox item clicked - do some cool things here
-                System.Diagnostics.Debug.WriteLine("Clicked on item: " + item.Content);
-                //+DataContext.ExitChat();
-            }
+                UseShellExecute = true,
+                Verb = "open"
+            };
+            Process.Start(ps);
         }
+
+
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
