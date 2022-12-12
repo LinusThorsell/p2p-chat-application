@@ -8,6 +8,7 @@ using System.Windows;
 
 namespace TDDD49Template.Models
 {
+    // Classes for showing messsageboxes from view.
     public interface IMessageService
     {
         bool Show(string title, string message, MessageBoxButton button);
@@ -22,6 +23,7 @@ namespace TDDD49Template.Models
         }
     }
 
+    // Classes for Messenger
     public class UserInteractionMessage : MessageBase
     {
         public string Message { get; set; }
