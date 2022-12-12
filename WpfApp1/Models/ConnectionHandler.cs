@@ -60,7 +60,6 @@ namespace WpfApp1.Models
 
             // Send response packet
             SendJSON(response);
-            //return 1;
             status = 1;
         }
         public void DenyIncomingChat()
@@ -80,7 +79,6 @@ namespace WpfApp1.Models
             SendJSON(response);
 
             // Trigger relisten on port number.
-            //return -1;
             status = -1;
         }
         public void Got_AcceptConnection(MessagePacket messagepacket)
@@ -93,14 +91,10 @@ namespace WpfApp1.Models
 
             partner = messagepacket.Name;
             CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
-            MessageBox.Show(messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!");
-            //return 1;
             status = 1;
         }
         public void Got_RejectConnection()
         {
-            MessageBox.Show("Your Chat request was denied. Try connecting to someone else!");
-            //return -1;
             status = -1;
         }
         public void Got_Message(MessagePacket messagepacket)
@@ -115,8 +109,6 @@ namespace WpfApp1.Models
         }
         public void Got_CloseConnection()
         {
-            // If we have a closeconnection request, we close the connection.
-            //return -2;
             status = -2;
         }
         public void Got_Buzzz()
@@ -322,7 +314,6 @@ namespace WpfApp1.Models
                 stream = client.GetStream();
                 
                 hasAccepted = true; // We assume that the person requesting the connection doesnt need to approve it again.
-                //var message = JsonSerializer.Serialize(obj); // Make json object into string
                 var serialized_messagepacket = JsonSerializer.Serialize<MessagePacket>(packet);
                 var bytestringed_messagepacket = Encoding.UTF8.GetBytes(serialized_messagepacket); // Encode string to sendable bytes
                 await stream.WriteAsync(bytestringed_messagepacket); // Send bytes over stream.
@@ -336,7 +327,6 @@ namespace WpfApp1.Models
                      
                     if (received > 0) // If the string is larger than 0 = received something usable.
                     {
-                        //ReceiveMessage(received_messagepacket);
                         Messenger.Default.Send<MessagePacketReceived>(new MessagePacketReceived() {hasAccepted=hasAccepted, Message=received_messagepacket });
 
                         if (status == -1) // if we have been denied close the socket
@@ -347,7 +337,7 @@ namespace WpfApp1.Models
                         if (status == -2)
                         {
                             keepConnection = false;
-                            MessageBox.Show(partner + " disconnected from the chat.");
+                            Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = (partner + " disconnected from the chat."), Button = MessageBoxButton.OK });
                             handleConnectionClosed();
                             CurrentConversationID = "";
                         }
@@ -356,7 +346,7 @@ namespace WpfApp1.Models
             }
             catch
             {
-                MessageBox.Show(partner + " disconnected from the chat.");
+                Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = (partner + " disconnected from the chat."), Button=MessageBoxButton.OK });
                 System.Diagnostics.Debug.WriteLine("Could not connect to TcpListener");
                 handleConnectionClosed();
             }
@@ -394,7 +384,6 @@ namespace WpfApp1.Models
 
                         if (received > 0)
                         {
-                            //int status = ReceiveMessage(message);
                             Messenger.Default.Send<MessagePacketReceived>(new MessagePacketReceived() { hasAccepted = hasAccepted, Message = message });
 
                             if (status == -1)
@@ -409,7 +398,7 @@ namespace WpfApp1.Models
                                 listener.Stop();
                                 // Break loop to relisten for next connection request.
                                 keepConnection = false;
-                                MessageBox.Show(partner + " disconnected from the chat.");
+                                Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = (partner + " disconnected from the chat."), Button = MessageBoxButton.OK });
                                 handleConnectionClosed();
                                 CurrentConversationID = "";
                             };
@@ -422,11 +411,11 @@ namespace WpfApp1.Models
                 System.Diagnostics.Debug.WriteLine("Could not start listening/connect to TCPClient");
                 if (partner != "")
                 {
-                    MessageBox.Show(partner + " disconnected from the chat.");
+                    Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = (partner + " disconnected from the chat."), Button = MessageBoxButton.OK });
                 }
                 else
                 {
-                    MessageBox.Show("Unknown conection error, closing connection.");
+                    Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = "Unknown conection error, closing connection.", Button = MessageBoxButton.OK });
                 }
 
                 listener.Stop();

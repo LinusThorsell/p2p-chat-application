@@ -19,7 +19,7 @@ namespace WpfApp1
         private void Main(Object Sender, StartupEventArgs e)
         {
             MainWindow mainWindow = new MainWindow(new MainViewModel(new MessageService(), new ConnectionHandler()));
-            mainWindow.Title = "Message Sender";
+            mainWindow.Title = "Linus Amazing WPF MVVM C# Peer-2-Peer Chat Application!";
             mainWindow.Show();
         }
     }

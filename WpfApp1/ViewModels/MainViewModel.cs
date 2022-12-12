@@ -37,6 +37,7 @@ namespace WpfApp1.ViewModels
         // Mirror data in model
         public ObservableCollection<MessagePacket>? MessagePackets => Connection.MessagePackets;
 
+        // Bindings etc
         public ConnectionHandler Connection
         {
             get { return _connection; }
@@ -83,6 +84,7 @@ namespace WpfApp1.ViewModels
             set { _queryToSearch = value; }
         }
 
+        // Commands
         public ICommand PushSendMessage
         {
             get { return _pushSendMessage; }
@@ -122,21 +124,21 @@ namespace WpfApp1.ViewModels
             set { _pushBuzzz = value; }
         }
 
-        public void showPastChat(ConversationStore.Conversation conversation)
-        {
-            Connection.showPastChat(conversation);
-        }
-
         public MainViewModel(MessageService messageService, ConnectionHandler connectionHandler)
         {
             this.Connection = connectionHandler;
             this.Message = messageService;
 
+            // Get Received Message from Model.
             Messenger.Default.Register<MessagePacketReceived>(this, msg =>
             {
                 ReceiveMessage(msg.Message, msg.hasAccepted);
             });
-
+            // Get UserInteractionMessage from Model.
+            Messenger.Default.Register<UserInteractionMessage>(this, msg =>
+            {
+                Message.Show(msg.Title, msg.Message, msg.Button);
+            });
 
             this.PushSendMessage = new SendMessageCommand(this);
             this.PushConnect = new ConnectCommand(this);
@@ -146,7 +148,10 @@ namespace WpfApp1.ViewModels
             this.PushSearchAndUpdatePastConversations = new SearchAndUpdatePastConversationsCommand(this);
             this.PushBuzzz = new BuzzzCommand(this);
         }
-
+        public void showPastChat(ConversationStore.Conversation conversation)
+        {
+            Connection.showPastChat(conversation);
+        }
         public void searchAndUpdatePastConversations()
         {
             Connection.SearchAndUpdatePastConversations(_queryToSearch);
@@ -195,6 +200,7 @@ namespace WpfApp1.ViewModels
                         MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
                         // User clicked yes
+                        Message.Show("Notification", messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!", MessageBoxButton.OK);
                         Connection.AcceptIncomingChat(messagepacket);
                     }
                     else
@@ -214,6 +220,7 @@ namespace WpfApp1.ViewModels
             }
             else if (messagepacket.RequestType == "rejectconnection")
             {
+                Message.Show("Notification", "Your Chat request was denied. Try connecting to someone else!", MessageBoxButton.OK);
                 Connection.Got_RejectConnection();
             }
             else if (messagepacket.RequestType == "message")
