@@ -1,11 +1,7 @@
 ﻿using GalaSoft.MvvmLight.Command;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net.Sockets;
 using System.Windows.Input;
 using TDDD49Template.Models;
 using WpfApp1.Models;
@@ -31,6 +27,9 @@ namespace WpfApp1.ViewModels
         private ICommand _pushExitChat;
         private ICommand _pushSearchAndUpdatePastConversations;
         private ICommand _pushBuzzz;
+
+           // Mirror data in model
+        public ObservableCollection<MessagePacket>? MessagePackets => Connection.MessagePackets;
 
         public ConnectionHandler Connection
         {

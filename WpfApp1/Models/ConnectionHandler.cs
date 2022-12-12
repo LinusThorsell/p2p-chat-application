@@ -1,28 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Net;
-using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Markup;
-using System.Windows.Interop;
 using System.Net.Sockets;
 using System.Text.Json;
-using Microsoft.VisualBasic;
-using System.Xml.Linq;
 using System.Collections.ObjectModel;
-
 using TDDD49Template.Models;
-using System.Windows.Threading;
-using System.Windows.Controls;
-using System.Reflection.Metadata.Ecma335;
-using System.Windows.Input;
-using static TDDD49Template.Models.ConversationStore;
 
 namespace WpfApp1.Models
 {

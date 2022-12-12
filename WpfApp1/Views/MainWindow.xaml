@@ -105,7 +105,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <ListBox x:Name="Listbox" Grid.Row="0" ItemsSource="{Binding Path=Connection.MessagePackets}" ScrollViewer.VerticalScrollBarVisibility="Auto" BorderThickness="2" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox x:Name="Listbox" Grid.Row="0" ItemsSource="{Binding Path=MessagePackets}" ScrollViewer.VerticalScrollBarVisibility="Auto" BorderThickness="2" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel>
