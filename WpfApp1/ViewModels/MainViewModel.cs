@@ -200,7 +200,6 @@ namespace WpfApp1.ViewModels
                         MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
                         // User clicked yes
-                        Message.Show("Notification", messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!", MessageBoxButton.OK);
                         Connection.AcceptIncomingChat(messagepacket);
                     }
                     else
@@ -216,6 +215,7 @@ namespace WpfApp1.ViewModels
             }
             else if (messagepacket.RequestType == "acceptconnection")
             {
+                Message.Show("Notification", messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!", MessageBoxButton.OK);
                 Connection.Got_AcceptConnection(messagepacket);
             }
             else if (messagepacket.RequestType == "rejectconnection")
