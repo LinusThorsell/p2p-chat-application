@@ -8,10 +8,15 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Collections.ObjectModel;
 using TDDD49Template.Models;
+using WpfApp1.ViewModels;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using GalaSoft.MvvmLight.Messaging;
+using System.Windows.Interop;
 
 namespace WpfApp1.Models
 {
-    public class ConnectionHandler
+    public class ConnectionHandler //: INotifyPropertyChanged
     {
         TcpClient client;
         TcpListener listener;
@@ -25,8 +30,97 @@ namespace WpfApp1.Models
         bool stopListening = false;
         bool keepConnection = true;
 
+        public int status = 0;
+
         public ObservableCollection<MessagePacket>? MessagePackets { get; protected set; } = new ObservableCollection<MessagePacket>();
         public ObservableCollection<ConversationStore.Conversation>? PastConversations { get; protected set; } = new ObservableCollection<ConversationStore.Conversation>();
+
+        // ============== Frontend / ViewModel Functions ============
+        public void AcceptIncomingChat(MessagePacket messagepacket)
+        {
+            // Clear any past messages
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                MessagePackets.Clear();
+            }));
+
+            hasAccepted = true;
+            partner = messagepacket.Name;
+
+            CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
+
+            // Create response packet
+            MessagePacket? response = new()
+            {
+                RequestType = "acceptconnection",
+                Name = displayname,
+                Date = DateTime.Now,
+                Message = ""
+            };
+
+            // Send response packet
+            SendJSON(response);
+            status = 1;
+        }
+        public void DenyIncomingChat()
+        {
+            // Send denied message to requester
+
+            // Create response packet
+            MessagePacket? response = new()
+            {
+                RequestType = "rejectconnection",
+                Name = "",
+                Date = DateTime.Now,
+                Message = ""
+            };
+
+            // Send response packet
+            SendJSON(response);
+
+            // Trigger relisten on port number.
+            status = -1;
+        }
+        public void Got_AcceptConnection(MessagePacket messagepacket)
+        {
+            // Remove all current chat messages in the window.
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                MessagePackets.Clear();
+            }));
+
+            partner = messagepacket.Name;
+            CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
+            status = 1;
+        }
+        public void Got_RejectConnection()
+        {
+            status = -1;
+        }
+        public void Got_Message(MessagePacket messagepacket)
+        {
+            // If we have a message, we create the message bubble.
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                MessagePackets.Add(messagepacket);
+            }));
+            conversationStore.UpdateConversation(CurrentConversationID, MessagePackets, displayname, partner);
+            UpdatePastChats();
+        }
+        public void Got_CloseConnection()
+        {
+            status = -2;
+        }
+        public void Got_Buzzz()
+        {
+            receiveBuzzz();
+        }
+
+        public void SetDisplayname(string name)
+        {
+            displayname = name;
+            UpdatePastChats();
+        }
 
         public void showPastChat(ConversationStore.Conversation conversation)
         {
@@ -59,28 +153,6 @@ namespace WpfApp1.Models
             }));
         }
 
-        public void AddMessage(MessagePacket messagePacket)
-        {
-            MessagePackets.Add(messagePacket);
-        }
-        
-        private void receiveBuzzz()
-        {
-            //the wav filename
-            string file = "pling.wav";
-
-            //get the current assembly
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-
-            //load the embedded resource as a stream
-            var stream = assembly.GetManifestResourceStream(string.Format("{0}.Res.{1}", assembly.GetName().Name, file));
-
-            //load the stream into the player
-            var player = new System.Media.SoundPlayer(stream);
-
-            //play the sound
-            player.Play();
-        }
         public void sendBuzzz()
         {
             SendJSON(new MessagePacket()
@@ -135,8 +207,6 @@ namespace WpfApp1.Models
         }
         public void SendMessage(String msg)
         {
-            // Here is the code which sends the data over the network.
-            // No user interaction shall exist in the model.
 
             MessagePacket? messagepacket = new()
             {
@@ -159,6 +229,8 @@ namespace WpfApp1.Models
             stream.WriteAsync(encoded_messagepacket);
 
         }
+
+        // =================== Backend =========================
         private void SendJSON(MessagePacket messagepacket)
         {
             var serialized_messagepacket = (JsonSerializer.Serialize<MessagePacket>(messagepacket));
@@ -168,12 +240,6 @@ namespace WpfApp1.Models
                 stream.WriteAsync(encoded_messagepacket);
             }
         }
-        public void SetDisplayname(string name)
-        {
-            displayname = name;
-            UpdatePastChats();
-        }
-
         private void UpdatePastChats()
         {
             Application.Current.Dispatcher.Invoke(new Action(() =>
@@ -187,128 +253,38 @@ namespace WpfApp1.Models
                 }
             }));
         }
-
-        private int ReceiveMessage(string jsonobj)
+        public void AddMessage(MessagePacket messagePacket)
         {
-            System.Diagnostics.Debug.WriteLine($"Message received: \"{jsonobj}\"");
-
-            MessagePacket? messagepacket = JsonSerializer.Deserialize<MessagePacket>(jsonobj);
-
-            if (messagepacket == null) { return -1; }   // Guard for null values.
-
-            // If we have a establishconnection request, ask the receiver if they want to connect, otherwise disconnect socket.
-            if (messagepacket.RequestType == "establishconnection")
-            {
-                if (!hasAccepted)
-                {
-                    if (MessageBox.Show("Do you want to accept the chat request from user " + messagepacket.Name + "?",
-                        "Message Request Incoming",
-                        MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-                    {
-                        // User clicked yes
-
-                        // Clear any past messages
-                        Application.Current.Dispatcher.Invoke(new Action(() =>
-                        {
-                            MessagePackets.Clear();
-                        }));
-
-                        hasAccepted = true;
-                        partner = messagepacket.Name;
-
-                        CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
-
-                        // Create response packet
-                        MessagePacket? response = new()
-                        {
-                            RequestType = "acceptconnection",
-                            Name = displayname,
-                            Date = DateTime.Now,
-                            Message = ""
-                        };
-
-                        // Send response packet
-                        SendJSON(response);
-                        return 1;
-
-                    }
-                    else
-                    {
-                        // User clicked no
-                        // Send denied message to requester
-
-                        // Create response packet
-                        MessagePacket? response = new()
-                        {
-                            RequestType = "rejectconnection",
-                            Name = "",
-                            Date = DateTime.Now,
-                            Message = ""
-                        };
-
-                        // Send response packet
-                        SendJSON(response);
-
-                        // Trigger relisten on port number.
-                        return -1;
-                    }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"establishconnection received while already connected: \"{jsonobj}\"");
-                }
-            }
-            else if (messagepacket.RequestType == "acceptconnection")
-            {
-                // Remove all current chat messages in the window.
-                Application.Current.Dispatcher.Invoke(new Action(() =>
-                {
-                    MessagePackets.Clear();
-                }));
-
-                partner = messagepacket.Name;
-                CurrentConversationID = displayname + partner + DateTime.Now.ToString("HH:mm:ss");
-                MessageBox.Show(messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!");
-                return 1;
-            }
-            else if (messagepacket.RequestType == "rejectconnection")
-            {
-                MessageBox.Show("Your Chat request was denied. Try connecting to someone else!");
-                return -1;
-            }
-            else if (messagepacket.RequestType == "message")
-            {
-                // If we have a message, we create the message bubble.
-                Application.Current.Dispatcher.Invoke(new Action(() =>
-                {
-                    MessagePackets.Add(messagepacket);
-                }));
-                conversationStore.UpdateConversation(CurrentConversationID, MessagePackets, displayname, partner);
-                UpdatePastChats();
-            }
-            else if (messagepacket.RequestType == "closeconnection")
-            {
-                // If we have a closeconnection request, we close the connection.
-                return -2;
-            }
-            else if (messagepacket.RequestType == "buzzz")
-            {
-                receiveBuzzz();
-            }
-
-            return 1;
+            MessagePackets.Add(messagePacket);
         }
 
+        private void receiveBuzzz()
+        {
+            //the wav filename
+            string file = "pling.wav";
+
+            //get the current assembly
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+
+            //load the embedded resource as a stream
+            var stream = assembly.GetManifestResourceStream(string.Format("{0}.Res.{1}", assembly.GetName().Name, file));
+
+            //load the stream into the player
+            var player = new System.Media.SoundPlayer(stream);
+
+            //play the sound
+            player.Play();
+        }
         private void handleConnectionClosed()
         {
             // Reset variables
             partner = "";
-            
+
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
                 MessagePackets.Clear();
             }));
-            
+
             hasAccepted = false;
             CurrentConversationID = "";
         }
@@ -338,7 +314,6 @@ namespace WpfApp1.Models
                 stream = client.GetStream();
                 
                 hasAccepted = true; // We assume that the person requesting the connection doesnt need to approve it again.
-                //var message = JsonSerializer.Serialize(obj); // Make json object into string
                 var serialized_messagepacket = JsonSerializer.Serialize<MessagePacket>(packet);
                 var bytestringed_messagepacket = Encoding.UTF8.GetBytes(serialized_messagepacket); // Encode string to sendable bytes
                 await stream.WriteAsync(bytestringed_messagepacket); // Send bytes over stream.
@@ -352,8 +327,7 @@ namespace WpfApp1.Models
                      
                     if (received > 0) // If the string is larger than 0 = received something usable.
                     {
-
-                        int status = ReceiveMessage(received_messagepacket);
+                        Messenger.Default.Send<MessagePacketReceived>(new MessagePacketReceived() {hasAccepted=hasAccepted, Message=received_messagepacket });
 
                         if (status == -1) // if we have been denied close the socket
                         {
@@ -363,7 +337,7 @@ namespace WpfApp1.Models
                         if (status == -2)
                         {
                             keepConnection = false;
-                            MessageBox.Show(partner + " disconnected from the chat.");
+                            Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = (partner + " disconnected from the chat."), Button = MessageBoxButton.OK });
                             handleConnectionClosed();
                             CurrentConversationID = "";
                         }
@@ -372,7 +346,7 @@ namespace WpfApp1.Models
             }
             catch
             {
-                MessageBox.Show(partner + " disconnected from the chat.");
+                Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = (partner + " disconnected from the chat."), Button=MessageBoxButton.OK });
                 System.Diagnostics.Debug.WriteLine("Could not connect to TcpListener");
                 handleConnectionClosed();
             }
@@ -410,8 +384,8 @@ namespace WpfApp1.Models
 
                         if (received > 0)
                         {
-                            int status = ReceiveMessage(message);
-                            
+                            Messenger.Default.Send<MessagePacketReceived>(new MessagePacketReceived() { hasAccepted = hasAccepted, Message = message });
+
                             if (status == -1)
                             {
                                 // User denied connection request => stop listening for their messages.
@@ -424,7 +398,7 @@ namespace WpfApp1.Models
                                 listener.Stop();
                                 // Break loop to relisten for next connection request.
                                 keepConnection = false;
-                                MessageBox.Show(partner + " disconnected from the chat.");
+                                Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = (partner + " disconnected from the chat."), Button = MessageBoxButton.OK });
                                 handleConnectionClosed();
                                 CurrentConversationID = "";
                             };
@@ -437,11 +411,11 @@ namespace WpfApp1.Models
                 System.Diagnostics.Debug.WriteLine("Could not start listening/connect to TCPClient");
                 if (partner != "")
                 {
-                    MessageBox.Show(partner + " disconnected from the chat.");
+                    Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = (partner + " disconnected from the chat."), Button = MessageBoxButton.OK });
                 }
                 else
                 {
-                    MessageBox.Show("Unknown conection error, closing connection.");
+                    Messenger.Default.Send<UserInteractionMessage>(new UserInteractionMessage() { Title = "Notification", Message = "Unknown conection error, closing connection.", Button = MessageBoxButton.OK });
                 }
 
                 listener.Stop();

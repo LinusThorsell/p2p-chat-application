@@ -1,8 +1,13 @@
 ﻿using GalaSoft.MvvmLight.Command;
+using GalaSoft.MvvmLight.Messaging;
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Net.Sockets;
+using System.Text.Json;
+using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using TDDD49Template.Models;
 using WpfApp1.Models;
 using WpfApp1.ViewModels.Commands;
@@ -12,6 +17,7 @@ namespace WpfApp1.ViewModels
     public class MainViewModel
     {
         private ConnectionHandler _connection;
+        private MessageService _messageService;
 
         private String _messageToSend;
         private String _portToConnect;
@@ -28,15 +34,22 @@ namespace WpfApp1.ViewModels
         private ICommand _pushSearchAndUpdatePastConversations;
         private ICommand _pushBuzzz;
 
-           // Mirror data in model
+        // Mirror data in model
         public ObservableCollection<MessagePacket>? MessagePackets => Connection.MessagePackets;
 
+        // Bindings etc
         public ConnectionHandler Connection
         {
             get { return _connection; }
             set
             {
                 _connection = value;
+            }
+        }
+        public MessageService Message {
+            get { return _messageService; }
+            set {
+                _messageService = value;
             }
         }
 
@@ -71,6 +84,7 @@ namespace WpfApp1.ViewModels
             set { _queryToSearch = value; }
         }
 
+        // Commands
         public ICommand PushSendMessage
         {
             get { return _pushSendMessage; }
@@ -110,14 +124,21 @@ namespace WpfApp1.ViewModels
             set { _pushBuzzz = value; }
         }
 
-        public void showPastChat(ConversationStore.Conversation conversation)
-        {
-            Connection.showPastChat(conversation);
-        }
-
-        public MainViewModel(ConnectionHandler connectionHandler)
+        public MainViewModel(MessageService messageService, ConnectionHandler connectionHandler)
         {
             this.Connection = connectionHandler;
+            this.Message = messageService;
+
+            // Get Received Message from Model.
+            Messenger.Default.Register<MessagePacketReceived>(this, msg =>
+            {
+                ReceiveMessage(msg.Message, msg.hasAccepted);
+            });
+            // Get UserInteractionMessage from Model.
+            Messenger.Default.Register<UserInteractionMessage>(this, msg =>
+            {
+                Message.Show(msg.Title, msg.Message, msg.Button);
+            });
 
             this.PushSendMessage = new SendMessageCommand(this);
             this.PushConnect = new ConnectCommand(this);
@@ -127,7 +148,10 @@ namespace WpfApp1.ViewModels
             this.PushSearchAndUpdatePastConversations = new SearchAndUpdatePastConversationsCommand(this);
             this.PushBuzzz = new BuzzzCommand(this);
         }
-
+        public void showPastChat(ConversationStore.Conversation conversation)
+        {
+            Connection.showPastChat(conversation);
+        }
         public void searchAndUpdatePastConversations()
         {
             Connection.SearchAndUpdatePastConversations(_queryToSearch);
@@ -155,6 +179,64 @@ namespace WpfApp1.ViewModels
         public void buzzz()
         {
             Connection.sendBuzzz();
+        }
+
+        // User Interaction Logic
+        private void ReceiveMessage(string jsonobj, bool hasAccepted)
+        {
+            System.Diagnostics.Debug.WriteLine($"Message received: \"{jsonobj}\"");
+
+            MessagePacket? messagepacket = JsonSerializer.Deserialize<MessagePacket>(jsonobj);
+
+            if (messagepacket == null) { return; }   // Guard for null values.
+
+            // If we have a establishconnection request, ask the receiver if they want to connect, otherwise disconnect socket.
+            if (messagepacket.RequestType == "establishconnection")
+            {
+                if (!hasAccepted)
+                {
+                    if (MessageBox.Show("Do you want to accept the chat request from user " + messagepacket.Name + "?",
+                        "Message Request Incoming",
+                        MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    {
+                        // User clicked yes
+                        Message.Show("Notification", messagepacket.Name + " has accepted your Chat Request! Enjoy chatting!", MessageBoxButton.OK);
+                        Connection.AcceptIncomingChat(messagepacket);
+                    }
+                    else
+                    {
+                        // User clicked no
+                        Connection.DenyIncomingChat();
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"establishconnection received while already connected: \"{jsonobj}\"");
+                }
+            }
+            else if (messagepacket.RequestType == "acceptconnection")
+            {
+                Connection.Got_AcceptConnection(messagepacket);
+            }
+            else if (messagepacket.RequestType == "rejectconnection")
+            {
+                Message.Show("Notification", "Your Chat request was denied. Try connecting to someone else!", MessageBoxButton.OK);
+                Connection.Got_RejectConnection();
+            }
+            else if (messagepacket.RequestType == "message")
+            {
+                Connection.Got_Message(messagepacket);
+            }
+            else if (messagepacket.RequestType == "closeconnection")
+            {
+                Connection.Got_CloseConnection();
+            }
+            else if (messagepacket.RequestType == "buzzz")
+            {
+                Connection.Got_Buzzz();
+            }
+
+            //return 1;
         }
     }
 }

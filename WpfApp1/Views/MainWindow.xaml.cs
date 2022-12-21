@@ -16,7 +16,6 @@ namespace WpfApp1
         {
             InitializeComponent();
             this.DataContext = mainViewModel;
-
         }
 
         private void HandleLinkClick(object sender, RequestNavigateEventArgs e)
